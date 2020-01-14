@@ -11,6 +11,7 @@ import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import com.csx.m3u8lib.M3U8DownloadTask;
 import com.csx.m3u8lib.M3U8LiveManger;
 import com.csx.m3u8lib.bean.OnDownloadListener;
 
@@ -55,32 +56,62 @@ public class MainActivity extends AppCompatActivity {
 
     private void downLoadM3U8() {
 
-        M3U8LiveManger.getInstance(this).caching(m3u8Path, new OnDownloadListener() {
+        M3U8DownloadTask task = new M3U8DownloadTask(this);
+
+        task.download(m3u8Path, new OnDownloadListener() {
             @Override
             public void onDownloading(long itemFileSize, int totalTs, int curTs) {
-                Log.i(TAG, "onDownloading: itemFileSize = "+itemFileSize+"  totalTs = "+totalTs+"  curTs = "+curTs);
+                Log.d(TAG, "onDownloading: " + curTs);
             }
 
             @Override
-            public void onSuccess() {
-                Log.i(TAG, "onSuccess: ");
+            public void onSuccess(String filePath) {
+                Log.d(TAG, "onSuccess:  filePath = "+filePath);
             }
 
             @Override
             public void onProgress(long curLength) {
-                Log.i(TAG, "onProgress: curLength"+curLength);
+                Log.d(TAG, "onProgress: curLength = "+curLength);
             }
 
             @Override
             public void onStart() {
-                Log.i(TAG, "onStart: ");
+                Log.d(TAG, "onStart: ");
             }
 
             @Override
             public void onError(Throwable errorMsg) {
-                Log.i(TAG, "onError: errorMsg.getMessage() = "+errorMsg.getMessage());
+                Log.d(TAG, "onError: " + errorMsg.getMessage());
             }
         });
+
+
+        //M3U8LiveManger.getInstance(this).caching(m3u8Path, new OnDownloadListener() {
+        //    @Override
+        //    public void onDownloading(long itemFileSize, int totalTs, int curTs) {
+        //        Log.i(TAG, "onDownloading: itemFileSize = "+itemFileSize+"  totalTs = "+totalTs+"  curTs = "+curTs);
+        //    }
+        //
+        //    @Override
+        //    public void onSuccess() {
+        //        Log.i(TAG, "onSuccess: ");
+        //    }
+        //
+        //    @Override
+        //    public void onProgress(long curLength) {
+        //        Log.i(TAG, "onProgress: curLength"+curLength);
+        //    }
+        //
+        //    @Override
+        //    public void onStart() {
+        //        Log.i(TAG, "onStart: ");
+        //    }
+        //
+        //    @Override
+        //    public void onError(Throwable errorMsg) {
+        //        Log.i(TAG, "onError: errorMsg.getMessage() = "+errorMsg.getMessage());
+        //    }
+        //});
 
 
     }

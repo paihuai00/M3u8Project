@@ -19,7 +19,7 @@ public interface OnDownloadListener extends BaseListener {
     /**
      * 下载成功
      */
-    void onSuccess();
+    void onSuccess(String filePath);
 
     /**
      * 当前已经下载的文件大小

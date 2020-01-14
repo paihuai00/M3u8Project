@@ -82,7 +82,7 @@ public class M3U8LiveManger {
                     if (netSpeedTimer != null) {
                         netSpeedTimer.cancel();
                     }
-                    onDownloadListener.onSuccess();
+                    onDownloadListener.onSuccess("");
                     break;
             }
         }

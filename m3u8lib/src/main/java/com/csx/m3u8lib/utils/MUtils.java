@@ -109,12 +109,12 @@ public class MUtils {
      * 将M3U8对象的所有ts切片合并为1个
      *
      * @param m3u8
-     * @param tofile
+     * @param toFile
      * @throws IOException
      */
-    public static void merge(M3U8 m3u8, String tofile, String basePath) throws IOException {
+    public static void merge(M3U8 m3u8, String toFile, String basePath) throws IOException {
         List<M3U8Ts> mergeList = getLimitM3U8Ts(m3u8);
-        File saveFile = new File(tofile);
+        File saveFile = new File(toFile);
         FileOutputStream fos = new FileOutputStream(saveFile);
         File file;
         for (M3U8Ts ts : mergeList) {

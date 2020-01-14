@@ -1,5 +1,6 @@
 package com.csx.m3u8lib;
 
+import android.content.Context;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
@@ -33,16 +34,13 @@ public class M3U8DownloadTask {
     private static final int WHAT_ON_PROGRESS = 1002;
     private static final int WHAT_ON_SUCCESS = 1003;
 
-    public M3U8DownloadTask(String taskId) {
-        this.taskId = taskId;
-        //需要加上当前时间作为文件夹（由于合并时是根据文件夹来合并的，合并之后需要删除所有的ts文件，这里用到了多线程，所以需要按文件夹来存ts）
-        tempDir += File.separator + System.currentTimeMillis() / (1000 * 60 * 60 * 24) + "-" + taskId;
-    }
-
     //临时下载目录
-    private String tempDir = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "m3u8temp";
+    private String tempDir;
+    //private String tempDir = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "m3u8temp";
     //最终文件保存的路径
-    private String saveFilePath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "11m3u8";
+
+    private String saveDirPath;
+    private String saveFileName = "";
     //当前下载完成的文件个数
     private static int curTs = 0;
     //总文件的个数
@@ -83,6 +81,37 @@ public class M3U8DownloadTask {
      */
     private Timer netSpeedTimer;
     private ExecutorService executor;//线程池
+    private Thread mergeThread;//合成线程
+
+    private Context mContext;
+
+    public M3U8DownloadTask(Context context) {
+        this(
+                context,
+                context.getExternalCacheDir() + File.separator + "m3u8",
+                System.currentTimeMillis() + ".ts");
+    }
+
+    public M3U8DownloadTask(Context context,String fileDir,String fileName) {
+        this.taskId = "1001";
+        this.saveFileName = fileName;
+        this.saveDirPath = fileDir;
+        this.mContext = context;
+        //需要加上当前时间作为文件夹（由于合并时是根据文件夹来合并的，合并之后需要删除所有的ts文件，这里用到了多线程，所以需要按文件夹来存ts）
+        tempDir = context.getExternalCacheDir() + File.separator + "m3u8_temp";
+        tempDir += File.separator + System.currentTimeMillis() / (1000 * 60 * 60 * 24) + "-" + taskId;
+
+        //如果不是.ts结尾
+        if (saveFileName.endsWith(".ts")) saveFileName += ".ts";
+
+        //如果文件夹不存在，就创建
+        File file = new File(fileDir);
+        if (!file.exists()) file.mkdirs();
+
+        File tempDirFile=new File(tempDir);
+        if (!tempDirFile.exists()) tempDirFile.mkdirs();
+    }
+
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -97,7 +126,7 @@ public class M3U8DownloadTask {
                     if (netSpeedTimer != null) {
                         netSpeedTimer.cancel();
                     }
-                    onDownloadListener.onSuccess();
+                    onDownloadListener.onSuccess(saveDirPath + File.separator + saveFileName);
                     break;
             }
         }
@@ -173,7 +202,7 @@ public class M3U8DownloadTask {
         M3U8InfoManger.getInstance().getM3U8Info(url, new OnM3U8InfoListener() {
             @Override
             public void onSuccess(final M3U8 m3U8) {
-                new Thread() {
+                mergeThread=new Thread() {
                     @Override
                     public void run() {
                         try {
@@ -182,15 +211,14 @@ public class M3U8DownloadTask {
                                 executor.shutdown();//下载完成之后要关闭线程池
                             }
                             while (executor != null && !executor.isTerminated()) {
-                                //等待中
+                                //等待中,等待下载完成
                                 Thread.sleep(100);
                             }
                             if (isRunning) {
-                                String saveFileName = saveFilePath.substring(saveFilePath.lastIndexOf("/") + 1);
                                 String tempSaveFile = tempDir + File.separator + saveFileName;//生成临时文件
                                 MUtils.merge(m3U8, tempSaveFile, tempDir);//合并ts
                                 //移动到指定的目录
-                                MUtils.moveFile(tempSaveFile, saveFilePath);//移动到指定文件夹
+                                MUtils.moveFile(tempSaveFile, saveDirPath + File.separator + saveFileName);//移动到指定文件夹
                                 if (isClearTempDir) {
                                     mHandler.postDelayed(new Runnable() {
                                         @Override
@@ -216,7 +244,8 @@ public class M3U8DownloadTask {
                             handlerError(e);
                         }
                     }
-                }.start();
+                };
+                mergeThread.start();
             }
 
             @Override
@@ -334,12 +363,12 @@ public class M3U8DownloadTask {
         }
     }
 
-    public String getSaveFilePath() {
-        return saveFilePath;
+    public String getSaveFileName() {
+        return saveFileName;
     }
 
-    public void setSaveFilePath(String saveFilePath) {
-        this.saveFilePath = saveFilePath;
+    public void setSaveFileName(String saveFileName) {
+        this.saveFileName = saveFileName;
     }
 
     /**
@@ -370,6 +399,12 @@ public class M3U8DownloadTask {
             netSpeedTimer = null;
         }
         isRunning = false;
+
+        if (mergeThread != null) {
+            mergeThread.interrupt();
+            mergeThread = null;
+        }
+
         if (executor != null) {
             executor.shutdownNow();
         }
